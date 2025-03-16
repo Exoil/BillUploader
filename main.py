@@ -1,11 +1,24 @@
 from fastapi import FastAPI
-from config import logger
 import uvicorn
 from contextlib import asynccontextmanager
+from Utilities.LogConfiguration import LogConfig
+from Utilities.LogData import LogData
+from loguru import logger
+
+
+# Configure logging
+log_data = LogData(
+    level = "INFO",
+    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+    pathToFile="logs/app.log",
+    rotation="10 MB",
+    retention="1 week"
+)
+
+LogConfig.setLogging(log_data)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """ Handles startup and shutdown events """
     logger.info("🎬 Application starting...")
     yield
     logger.info("🛑 Application shutting down...")
