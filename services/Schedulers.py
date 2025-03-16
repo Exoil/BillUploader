@@ -24,13 +24,16 @@ logger = logging.getLogger(__name__)
 async def upload_bills_job():
     """
     Job to upload all JPG and PNG files from the bills directory.
+    Files are removed after successful upload.
     """
     bill_files = []
+    file_paths = []
     
     # Find all jpg and png files in the directory
     for filename in os.listdir(BILLS_DIRECTORY):
         if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
             file_path = os.path.join(BILLS_DIRECTORY, filename)
+            file_paths.append(file_path)
             bill_files.append(open(file_path, 'rb'))
     
     if not bill_files:
@@ -41,6 +44,14 @@ async def upload_bills_job():
         async with ReceiptApiService() as service:
             result = await service.upload_receipts(bill_files)
             logger.info(f"Uploaded {len(bill_files)} bills: {result}")
+            
+            # Remove files after successful upload
+            for file_path in file_paths:
+                try:
+                    os.remove(file_path)
+                    logger.info(f"Removed file: {file_path}")
+                except Exception as e:
+                    logger.error(f"Error removing file {file_path}: {str(e)}")
     except Exception as e:
         logger.error(f"Error uploading bills: {str(e)}")
     finally:

@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from Utilities.LogConfiguration import LogConfig
 from Utilities.LogData import LogData
 from loguru import logger
+from services.Schedulers import schedule_jobs, scheduler, shutdown_scheduler
 
 
 # Configure logging
@@ -20,7 +21,19 @@ LogConfig.setLogging(log_data)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🎬 Application starting...")
+    
+    # Check if jobs exist and schedule them if they don't
+    if not scheduler.get_jobs():
+        logger.info("No scheduled jobs found. Setting up scheduler jobs...")
+        schedule_jobs()
+    else:
+        logger.info(f"Found {len(scheduler.get_jobs())} existing scheduled jobs")
+    
     yield
+    
+    # Shutdown the scheduler when the application stops
+    logger.info("Shutting down scheduler...")
+    shutdown_scheduler()
     logger.info("🛑 Application shutting down...")
 
 app = FastAPI(lifespan=lifespan)
