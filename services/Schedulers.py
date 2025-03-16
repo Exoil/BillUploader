@@ -9,7 +9,11 @@ from services.ReceiptApiService import ReceiptApiService
 import logging
 
 jobstores = {
-    "default": RedisJobStore(host="localhost", port=6379, db=0)
+    "default": RedisJobStore(
+        host=os.environ.get("REDIS_HOST", "localhost"),
+        port=int(os.environ.get("REDIS_PORT", 6379)),
+        db=0
+    )
 }
 
 # Initialize scheduler with Redis
@@ -79,13 +83,22 @@ def run_async_job(coroutine):
     """Helper function to run async jobs in the scheduler."""
     asyncio.run(coroutine())
 
+# Named functions for scheduler jobs instead of lambdas
+def run_upload_bills_job():
+    """Wrapper function for upload_bills_job to be used with scheduler"""
+    run_async_job(upload_bills_job)
+
+def run_weekly_report_job():
+    """Wrapper function for send_weekly_report_job to be used with scheduler"""
+    run_async_job(send_weekly_report_job)
+
 def schedule_jobs():
     """
     Schedule all jobs and start the scheduler.
     """
     # Schedule bill upload job to run daily at 10 PM
     scheduler.add_job(
-        lambda: run_async_job(upload_bills_job),
+        run_upload_bills_job,
         CronTrigger(hour=22, minute=0),
         id="upload_bills_job",
         replace_existing=True
@@ -93,7 +106,7 @@ def schedule_jobs():
     
     # Schedule weekly report job to run every Sunday at 1 PM
     scheduler.add_job(
-        lambda: run_async_job(send_weekly_report_job),
+        run_weekly_report_job,
         CronTrigger(day_of_week='sun', hour=13, minute=0),
         id="send_weekly_report_job",
         replace_existing=True

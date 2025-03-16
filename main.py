@@ -27,7 +27,10 @@ async def lifespan(app: FastAPI):
         logger.info("No scheduled jobs found. Setting up scheduler jobs...")
         schedule_jobs()
     else:
-        logger.info(f"Found {len(scheduler.get_jobs())} existing scheduled jobs")
+        jobs = scheduler.get_jobs()
+        logger.info(f"Found {len(jobs)} existing scheduled jobs")
+        for job in jobs:
+            logger.info(f"Scheduled job: {job.id} - Next run: {job.next_run_time}")
     
     yield
     
