@@ -7,7 +7,10 @@ from typing import List, Optional, Dict, Any, BinaryIO
 class ReceiptApiService:
     """Service for interacting with the Receipt Analyzer API."""
     
-    def __init__(self, base_url: str = None, timeout: float = 60.0):
+    def __init__(
+            self,
+            base_url: str = None,
+            timeout: float = 60.0):
         """
         Initialize the Receipt API Service.
         
@@ -26,7 +29,11 @@ class ReceiptApiService:
     async def __aenter__(self):
         return self
     
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+            self,
+            exc_type,
+            exc_val,
+            exc_tb):
         await self.close()
     
     async def close(self):
@@ -68,7 +75,9 @@ class ReceiptApiService:
         response = await self.client.get("/version")
         return await self._handle_response(response)
     
-    async def upload_receipts(self, files: List[BinaryIO]) -> Dict[str, Any]:
+    async def upload_receipts(
+            self,
+            files: List[BinaryIO]) -> Dict[str, Any]:
         """
         Upload receipt files to the API for analysis.
         
