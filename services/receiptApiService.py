@@ -10,7 +10,8 @@ class ReceiptApiService:
     def __init__(
             self,
             base_url: str = None,
-            timeout: float = 60.0):
+            timeout: float = 60.0,
+            verify_ssl: bool = True):
         """
         Initialize the Receipt API Service.
         
@@ -18,12 +19,14 @@ class ReceiptApiService:
             base_url: Base URL for the Receipt Analyzer API. If not provided, 
                     will try to get from environment variable.
             timeout: Request timeout in seconds.
+            verify_ssl: Whether to verify SSL certificates. Set to False for self-signed certs.
         """
         self.base_url = base_url or os.environ.get("RECEIPT_API_URL", "http://localhost:5000")
             
         self.client = httpx.AsyncClient(
             base_url=self.base_url, 
-            timeout=timeout
+            timeout=timeout,
+            verify=verify_ssl
         )
     
     async def __aenter__(self):
@@ -48,10 +51,9 @@ class ReceiptApiService:
             response: The httpx response object.
             
         Returns:
-            Parsed JSON response.
+            Parsed JSON response or text content if not JSON.
             
         Raises:
-            ValueError: If response is not valid JSON.
             httpx.HTTPStatusError: If the request fails.
         """
         response.raise_for_status()
@@ -59,7 +61,8 @@ class ReceiptApiService:
         try:
             return response.json()
         except ValueError:
-            raise ValueError(f"Invalid JSON response: {response.text}")
+            # If not JSON, return the text content as a dict
+            return {"message": response.text, "status_code": response.status_code}
     
     async def get_version(self) -> Dict[str, Any]:
         """

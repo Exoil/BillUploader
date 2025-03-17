@@ -45,19 +45,24 @@ async def upload_bills_job():
         return
     
     try:
-        async with ReceiptApiService() as service:
-            result = await service.upload_receipts(bill_files)
-            logger.info(f"Uploaded {len(bill_files)} bills: {result}")
-            
-            # Remove files after successful upload
-            for file_path in file_paths:
-                try:
-                    os.remove(file_path)
-                    logger.info(f"Removed file: {file_path}")
-                except Exception as e:
-                    logger.error(f"Error removing file {file_path}: {str(e)}")
+        logger.info(f"Attempting to upload {len(bill_files)} bills")
+        async with ReceiptApiService(verify_ssl=False) as service:
+            try:
+                await service.upload_receipts(bill_files)
+                logger.info(f"Uploaded {len(bill_files)}")
+                
+                # Remove files after successful upload
+                for file_path in file_paths:
+                    try:
+                        os.remove(file_path)
+                        logger.info(f"Removed file: {file_path}")
+                    except Exception as e:
+                        logger.error(f"Error removing file {file_path}: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error in upload_receipts method: {str(e)}", exc_info=True)
+                raise
     except Exception as e:
-        logger.error(f"Error uploading bills: {str(e)}")
+        logger.error(f"Error uploading bills: {str(e)}", exc_info=True)
     finally:
         # Close all opened files
         for file in bill_files:
@@ -73,7 +78,7 @@ async def send_weekly_report_job():
     first_day = last_day - timedelta(days=6)  # Previous Monday
     
     try:
-        async with ReceiptApiService() as service:
+        async with ReceiptApiService(verify_ssl=False) as service:
             result = await service.send_report_by_email(first_day, last_day)
             logger.info(f"Sent weekly report for {first_day.strftime('%d %b')} - {last_day.strftime('%d %b %Y')}: {result}")
     except Exception as e:
