@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import List
 from services.ReceiptApiService import ReceiptApiService
 import logging
+from pytz import utc
 
 jobstores = {
     "default": RedisJobStore(
@@ -16,8 +17,11 @@ jobstores = {
     )
 }
 
-# Initialize scheduler with Redis
-scheduler = BackgroundScheduler(jobstores=jobstores)
+# Initialize scheduler with Redis and explicit UTC timezone
+scheduler = BackgroundScheduler(
+    jobstores=jobstores,
+    timezone=utc  # Explicitly set UTC timezone
+)
 
 # Directory containing bills to process
 BILLS_DIRECTORY = os.environ.get("BILLS_DIRECTORY", "./bills")
@@ -101,30 +105,47 @@ def run_weekly_report_job():
     """Wrapper function for send_weekly_report_job to be used with scheduler"""
     run_async_job(send_weekly_report_job)
 
+def initialize_scheduler():
+    """Initialize and verify scheduler connection"""
+    try:
+        if not scheduler.running:
+            scheduler.start()
+            logger.info("Scheduler started successfully")
+        
+        # Test Redis connection
+        scheduler.get_jobs()  # This will throw an exception if Redis is not accessible
+        logger.info("Successfully connected to Redis jobstore")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to initialize scheduler: {str(e)}")
+        return False
+
 def schedule_jobs():
     """
     Schedule all jobs and start the scheduler.
     """
-    # Schedule bill upload job to run every 2 hours
-    scheduler.add_job(
-        run_upload_bills_job,
-        CronTrigger(hour='*/2', minute=0),
-        id="upload_bills_job",
-        replace_existing=True
-    )
-    
-    # Schedule weekly report job to run every Sunday at 1 PM
-    scheduler.add_job(
-        run_weekly_report_job,
-        CronTrigger(day_of_week='sun', hour=13, minute=0),
-        id="send_weekly_report_job",
-        replace_existing=True
-    )
-    
-    # Start the scheduler if it's not already running
-    if not scheduler.running:
-        scheduler.start()
-        logger.info("Scheduler started with jobs configured")
+    try:
+        # Schedule bill upload job to run every 2 hours
+        upload_job = scheduler.add_job(
+            run_upload_bills_job,
+            CronTrigger(hour='*/2', minute=0, timezone=utc),  # Explicit UTC
+            id="upload_bills_job",
+            replace_existing=True
+        )
+        logger.info(f"Scheduled upload_bills_job - Next run at: {upload_job.next_run_time} UTC")
+        
+        # Schedule weekly report job to run every Sunday at 1 PM UTC
+        report_job = scheduler.add_job(
+            run_weekly_report_job,
+            CronTrigger(day_of_week='sun', hour=13, minute=0, timezone=utc),  # Explicit UTC
+            id="send_weekly_report_job",
+            replace_existing=True
+        )
+        logger.info(f"Scheduled send_weekly_report_job - Next run at: {report_job.next_run_time} UTC")
+        
+    except Exception as e:
+        logger.error(f"Error scheduling jobs: {str(e)}")
+        raise
 
 def shutdown_scheduler():
     """

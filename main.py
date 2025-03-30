@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from Utilities.LogConfiguration import LogConfig
 from Utilities.LogData import LogData
 from loguru import logger
-from services.Schedulers import schedule_jobs, scheduler, shutdown_scheduler, upload_bills_job, send_weekly_report_job
+from services.Schedulers import schedule_jobs, scheduler, shutdown_scheduler, upload_bills_job, send_weekly_report_job, initialize_scheduler
 from services.ReceiptApiService import ReceiptApiService
 from datetime import datetime, timedelta
 
@@ -24,22 +24,27 @@ LogConfig.setLogging(log_data)
 async def lifespan(app: FastAPI):
     logger.info("🎬 Application starting...")
     
-    # Check if jobs exist and schedule them if they don't
+    if not initialize_scheduler():
+        logger.error("Failed to initialize scheduler - Application will start without scheduled jobs")
+        yield
+        return
     
-    if not scheduler.get_jobs():
-        logger.info("No scheduled jobs found. Setting up scheduler jobs...")
-        schedule_jobs()
-    else:
-        jobs = scheduler.get_jobs(
-            jobstore="default"
-        )
-        logger.info(f"Found {len(jobs)} existing scheduled jobs")
-        for job in jobs:
-            logger.info(f"Scheduled job: {job.id} - Next run: {job.next_run_time}")
+    try:
+        jobs = scheduler.get_jobs(jobstore="default")
+        if not jobs:
+            logger.info("No scheduled jobs found. Setting up scheduler jobs...")
+            schedule_jobs()
+        else:
+            logger.info(f"Found {len(jobs)} existing scheduled jobs:")
+            for job in jobs:
+                next_run = job.next_run_time.strftime("%Y-%m-%d %H:%M:%S") if job.next_run_time else "Not scheduled"
+                logger.info(f"Job ID: {job.id} - Next run: {next_run}")
+    except Exception as e:
+        logger.error(f"Error checking/scheduling jobs: {str(e)}")
     
     yield
     
-    #Shutdown the scheduler when the application stops
+    # Shutdown the scheduler when the application stops
     logger.info("Shutting down scheduler...")
     shutdown_scheduler()
     logger.info("🛑 Application shutting down...")
