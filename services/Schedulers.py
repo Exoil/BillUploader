@@ -46,7 +46,9 @@ async def upload_bills_job():
     
     try:
         logger.info(f"Attempting to upload {len(bill_files)} bills")
-        async with ReceiptApiService(verify_ssl=False) as service:
+        async with ReceiptApiService(
+            base_url="https://receipt-analyser-api:8082",
+            verify_ssl=False) as service:
             try:
                 await service.upload_receipts(bill_files)
                 logger.info(f"Uploaded {len(bill_files)}")
@@ -78,7 +80,9 @@ async def send_weekly_report_job():
     first_day = last_day - timedelta(days=6)  # Previous Monday
     
     try:
-        async with ReceiptApiService(verify_ssl=False) as service:
+        async with ReceiptApiService(
+            base_url="https://receipt-analyser-api:8082",
+            verify_ssl=False) as service:
             result = await service.send_report_by_email(first_day, last_day)
             logger.info(f"Sent weekly report for {first_day.strftime('%d %b')} - {last_day.strftime('%d %b %Y')}: {result}")
     except Exception as e:
@@ -101,10 +105,10 @@ def schedule_jobs():
     """
     Schedule all jobs and start the scheduler.
     """
-    # Schedule bill upload job to run daily at 10 PM
+    # Schedule bill upload job to run every 2 hours
     scheduler.add_job(
         run_upload_bills_job,
-        CronTrigger(hour=22, minute=0),
+        CronTrigger(hour='*/2', minute=0),
         id="upload_bills_job",
         replace_existing=True
     )
