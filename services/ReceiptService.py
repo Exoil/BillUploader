@@ -59,9 +59,13 @@ async def send_weekly_report_job():
     Covers period from Monday 00:01 to Sunday 23:59
     """
     today = datetime.now(utc)  # Use UTC timezone
-    # Calculate first and last day of previous week (Monday to Sunday)
-    last_day = today - timedelta(days=today.weekday() + 1)  # Previous Sunday
-    first_day = last_day - timedelta(days=6)  # Previous Monday
+    
+    # Calculate first and last day of current week
+    current_week_monday = today - timedelta(days=today.weekday())
+    
+    # Get previous week's dates
+    first_day = current_week_monday  # Previous Monday
+    last_day = today  # Next Sunday
     
     # Set precise times
     first_day = first_day.replace(hour=0, minute=1, second=0, microsecond=0)
