@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any, BinaryIO
 
 
-class ReceiptApiService:
+class ReceiptApiClient:
     """Service for interacting with the Receipt Analyzer API."""
     
     def __init__(
@@ -171,22 +171,3 @@ class ReceiptApiService:
             
         response = await self.client.get("/bills", params=params)
         return await self._handle_response(response)
-
-
-# Example usage:
-async def example_usage():
-    async with ReceiptApiService() as service:
-        # Get API version
-        version = await service.get_version()
-        print(f"API Version: {version}")
-        
-        # Upload receipts
-        with open("receipt1.jpg", "rb") as f1, open("receipt2.jpg", "rb") as f2:
-            result = await service.upload_receipts([f1, f2])
-            print(f"Upload result: {result}")
-        
-        # Send report by email
-        start = datetime(2023, 1, 1)
-        end = datetime(2023, 12, 31)
-        report_result = await service.send_report_by_email(start, end)
-        print(f"Report request result: {report_result}")
