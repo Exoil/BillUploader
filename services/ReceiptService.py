@@ -4,6 +4,7 @@ from typing import List
 from services.ReceiptApiClient import ReceiptApiClient
 import logging
 from pytz import utc
+from contextlib import ExitStack
 
 
 # Directory containing bills to process
@@ -21,7 +22,7 @@ async def upload_bills_job():
     
     # Find all jpg and png files in the directory
     for filename in os.listdir(BILLS_DIRECTORY):
-        if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+        if filename.lower().endswith(('.jpg', '.jpeg', '.png', '.JPG', '.JPEG')):
             file_path = os.path.join(BILLS_DIRECTORY, filename)
             file_paths.append(file_path)
     
@@ -35,8 +36,8 @@ async def upload_bills_job():
             base_url="https://receipt-analyser-api:8082",
             verify_ssl=False) as service:
             try:
-                # Open files only when needed
-                with [open(fp, 'rb') for fp in file_paths] as bill_files:
+                with ExitStack() as stack:
+                    bill_files = [stack.enter_context(open(fp, 'rb')) for fp in file_paths]
                     await service.upload_receipts(bill_files)
                 logger.info(f"Uploaded {len(file_paths)}")
                 
