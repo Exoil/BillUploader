@@ -69,7 +69,7 @@ async def send_weekly_report_job():
     last_day = today  # Next Sunday
     
     # Set precise times
-    first_day = first_day.replace(hour=0, minute=1, second=0, microsecond=0)
+    first_day = first_day.replace(hour=0, minute=0, second=0, microsecond=0)
     last_day = last_day.replace(hour=23, minute=59, second=59, microsecond=0)
     
     try:
